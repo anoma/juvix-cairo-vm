@@ -3,16 +3,13 @@ name = "juvix-cairo-vm"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm.git", features = ["std"] }
 mimalloc = { version = "0.1.37", default-features = false, optional = true }
 clap = { version = "4.3.10", features = ["derive"] }
 thiserror = { version = "1.0.40" }
-bincode = { version = "2.0.0-rc.3", default-features = false, features = [
-    "serde",
-] }
+bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde"] }
+nom = { version = "7.0" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
