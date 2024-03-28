@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_run_missing_program() {
-        let args = ["juvix-cairo-vm", "../missing/program.json"]
+        let args = ["juvix-cairo-vm", "missing/program.json"]
             .into_iter()
             .map(String::from);
         assert_matches!(run(args), Err(Error::IO(_)));
