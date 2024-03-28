@@ -32,7 +32,7 @@ fn parse_input(input: &str) -> IResult<&str, Hint> {
             tuple((tag("Input"), multispace0, char('('), multispace0)),
             delimited(multispace0, parse_string, tuple((multispace0, char(')')))),
         ),
-        |s: String| Hint::Input(s),
+        Hint::Input,
     )(input)
 }
 
