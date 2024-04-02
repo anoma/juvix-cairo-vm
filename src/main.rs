@@ -5,7 +5,6 @@ use cairo_vm::cairo_run::{self, EncodeTraceError};
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
-use cairo_vm::vm::runners::cairo_runner::RunResources;
 use clap::{Parser, ValueHint};
 use juvix_hint_processor::hint_processor::JuvixHintProcessor;
 use std::io::{self, Write};
@@ -129,7 +128,7 @@ fn run(args: impl Iterator<Item = String>) -> Result<(), Error> {
     let args = Args::try_parse_from(args)?;
 
     let trace_enabled = args.trace_file.is_some() || args.air_public_input.is_some();
-    let mut hint_executor = JuvixHintProcessor::new(&[], RunResources::default());
+    let mut hint_executor = JuvixHintProcessor::new();
     let cairo_run_config = cairo_run::CairoRunConfig {
         entrypoint: &args.entrypoint,
         trace_enabled,

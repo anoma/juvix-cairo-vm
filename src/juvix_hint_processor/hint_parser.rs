@@ -56,7 +56,7 @@ fn parse_hint(input: &str) -> IResult<&str, Hint> {
 
 #[derive(Debug)]
 pub struct ParseHintError {
-    message: String,
+    pub message: String,
 }
 
 impl FromStr for Hint {

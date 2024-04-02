@@ -22,15 +22,13 @@ struct MemoryExecScope {
 }
 
 pub struct JuvixHintProcessor {
-    hints: HashMap<usize, Vec<Hint>>,
     run_resources: RunResources,
 }
 
 impl JuvixHintProcessor {
-    pub fn new(hints: &[(usize, Vec<Hint>)], run_resources: RunResources) -> Self {
+    pub fn new() -> Self {
         Self {
-            hints: hints.iter().cloned().collect(),
-            run_resources,
+            run_resources: RunResources::default(),
         }
     }
     // Runs a single Hint
@@ -43,9 +41,7 @@ impl JuvixHintProcessor {
         match hint {
             Hint::Alloc(size) => self.alloc_constant_size(vm, exec_scopes, *size),
 
-            hint => Err(HintError::UnknownHint(
-                format!("{:?}", hint).into_boxed_str(),
-            )),
+            Hint::Input(_) => panic!("input hints not implemented"),
         }
     }
 
@@ -77,7 +73,6 @@ impl JuvixHintProcessor {
 }
 
 impl HintProcessorLogic for JuvixHintProcessor {
-    // Ignores all data except for the code that should contain
     fn compile_hint(
         &self,
         //Block of hint code as String
@@ -90,14 +85,12 @@ impl HintProcessorLogic for JuvixHintProcessor {
         //List of all references (key corresponds to element of the previous dictionary)
         _references: &[HintReference],
     ) -> Result<Box<dyn Any>, VirtualMachineError> {
-        let data = hint_code.parse().ok().and_then(|x: usize| self.hints.get(&x).cloned())
-        .ok_or_else(|| VirtualMachineError::CompileHintFail(
-            format!("No hint found for pc {hint_code}. Cairo1HintProccesor can only be used when running CasmContractClass").into_boxed_str()
-    ))?;
+        let data = hint_code
+            .parse::<Hint>()
+            .map_err(|e| VirtualMachineError::CompileHintFail(e.message.into_boxed_str()))?;
         Ok(any_box!(data))
     }
 
-    // Executes all the hints for a given pc
     fn execute_hint(
         &mut self,
         //Proxy to VM, contains refrences to necessary data
@@ -111,11 +104,8 @@ impl HintProcessorLogic for JuvixHintProcessor {
         //Constant values extracted from the program specification.
         _constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
-        let hints: &Vec<Hint> = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
-        for hint in hints {
-            self.execute(vm, exec_scopes, hint)?;
-        }
-        Ok(())
+        let hint: &Hint = hint_data.downcast_ref().ok_or(HintError::WrongHintData)?;
+        self.execute(vm, exec_scopes, hint)
     }
 }
 
