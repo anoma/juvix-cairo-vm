@@ -6,6 +6,15 @@ use serde_json::{Result as JsonResult, Value as JsonValue};
 
 pub type Value = Felt252;
 
+fn value_from_json(val: JsonValue) -> JsonResult<Value> {
+    match val {
+        JsonValue::Number(num) => {
+            Felt252::from_dec_str(num.as_str()).map_err(|_| Error::custom("invalid field element"))
+        }
+        _ => serde_json::from_value::<Value>(val),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ProgramInput {
     input_values: HashMap<String, Value>,
@@ -21,7 +30,7 @@ impl ProgramInput {
             JsonValue::Object(obj) => {
                 let mut res = HashMap::new();
                 for (k, v) in obj {
-                    res.insert(k, serde_json::from_value::<Value>(v)?);
+                    res.insert(k, value_from_json(v)?);
                 }
                 Ok(ProgramInput::new(res))
             }
