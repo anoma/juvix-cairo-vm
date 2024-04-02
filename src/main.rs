@@ -228,7 +228,7 @@ fn run(args: Args, program_input: ProgramInput) -> Result<(), Error> {
 
 fn run_cli(args: impl Iterator<Item = String>) -> Result<(), Error> {
     let args = Args::try_parse_from(args)?;
-    if let Some(file) = args.program_input.clone() {
+    if let Some(ref file) = args.program_input {
         let program_input = ProgramInput::from_json(std::fs::read_to_string(file)?.as_str())?;
         run(args, program_input)
     } else {
