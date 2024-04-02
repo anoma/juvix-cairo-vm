@@ -397,4 +397,62 @@ mod tests {
         let invalid_layout = "invalid layout name";
         assert!(validate_layout(invalid_layout).is_err());
     }
+
+    #[rstest]
+    #[case("tests/input1.json", "tests/input1_input.json")]
+    fn test_input_positive(#[case] program: &str, #[case] input: &str) {
+        let args = [
+            "juvix-cairo-vm",
+            program,
+            "--program_input",
+            input,
+            "--proof_mode",
+            "--layout",
+            "small",
+        ]
+        .into_iter()
+        .map(String::from);
+        assert_matches!(run_cli(args), Ok(()));
+    }
+
+    #[rstest]
+    #[case("tests/input1.json", "tests/input1_bad_input.json")]
+    fn test_input_negative(#[case] program: &str, #[case] input: &str) {
+        let args = [
+            "juvix-cairo-vm",
+            program,
+            "--program_input",
+            input,
+            "--proof_mode",
+            "--layout",
+            "small",
+        ]
+        .into_iter()
+        .map(String::from);
+        assert_matches!(run_cli(args), Err(Error::Runner(_)));
+    }
+
+    #[rstest]
+    #[case("tests/input2.json", "tests/input2_input.json", "83\n")]
+    fn test_input_output_positive(
+        #[case] program: &str,
+        #[case] input: &str,
+        #[case] output: &str,
+    ) {
+        let args_cli = [
+            "juvix-cairo-vm",
+            program,
+            "--program_input",
+            input,
+            "--proof_mode",
+            "--layout",
+            "small",
+        ]
+        .into_iter()
+        .map(String::from);
+        let program_input =
+            ProgramInput::from_json(std::fs::read_to_string(input).unwrap().as_str()).unwrap();
+        let args = Args::try_parse_from(args_cli).unwrap();
+        assert_eq!(run(args, program_input).unwrap(), output);
+    }
 }
