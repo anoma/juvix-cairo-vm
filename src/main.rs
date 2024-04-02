@@ -7,6 +7,8 @@ use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
 use clap::{Parser, ValueHint};
 use juvix_hint_processor::hint_processor::JuvixHintProcessor;
+use program_input::ProgramInput;
+use std::collections::HashMap;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -19,12 +21,15 @@ use mimalloc::MiMalloc;
 static ALLOC: MiMalloc = MiMalloc;
 
 mod juvix_hint_processor;
+mod program_input;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
     #[clap(value_parser, value_hint=ValueHint::FilePath)]
     filename: PathBuf,
+    #[clap(long = "program_input", value_parser, value_hint=ValueHint::FilePath)]
+    program_input: Option<PathBuf>,
     #[clap(long = "trace_file", value_parser)]
     trace_file: Option<PathBuf>,
     #[structopt(long = "print_output")]
@@ -89,6 +94,8 @@ enum Error {
     Trace(#[from] TraceError),
     #[error(transparent)]
     PublicInput(#[from] PublicInputError),
+    #[error(transparent)]
+    PrivateInput(#[from] serde_json::Error),
 }
 
 struct FileWriter {
@@ -124,11 +131,9 @@ impl FileWriter {
     }
 }
 
-fn run(args: impl Iterator<Item = String>) -> Result<(), Error> {
-    let args = Args::try_parse_from(args)?;
-
+fn run(args: Args, program_input: ProgramInput) -> Result<(), Error> {
     let trace_enabled = args.trace_file.is_some() || args.air_public_input.is_some();
-    let mut hint_executor = JuvixHintProcessor::new();
+    let mut hint_executor = JuvixHintProcessor::new(program_input);
     let cairo_run_config = cairo_run::CairoRunConfig {
         entrypoint: &args.entrypoint,
         trace_enabled,
@@ -221,12 +226,23 @@ fn run(args: impl Iterator<Item = String>) -> Result<(), Error> {
     Ok(())
 }
 
+fn run_cli(args: impl Iterator<Item = String>) -> Result<(), Error> {
+    let args = Args::try_parse_from(args)?;
+    if let Some(file) = args.program_input.clone() {
+        let program_input = ProgramInput::from_json(std::fs::read_to_string(file)?.as_str())?;
+        run(args, program_input)
+    } else {
+        let program_input = ProgramInput::new(HashMap::new());
+        run(args, program_input)
+    }
+}
+
 fn main() -> Result<(), Error> {
     #[cfg(test)]
     return Ok(());
 
     #[cfg(not(test))]
-    match run(std::env::args()) {
+    match run_cli(std::env::args()) {
         Err(Error::Cli(err)) => err.exit(),
         other => other,
     }
@@ -244,35 +260,35 @@ mod tests {
     #[case(["juvix-cairo-vm"].as_slice())]
     fn test_run_missing_mandatory_args(#[case] args: &[&str]) {
         let args = args.iter().cloned().map(String::from);
-        assert_matches!(run(args), Err(Error::Cli(_)));
+        assert_matches!(run_cli(args), Err(Error::Cli(_)));
     }
 
     #[rstest]
     #[case(["juvix-cairo-vm", "--layout", "broken_layout", "../tests/fibonacci.json"].as_slice())]
     fn test_run_invalid_args(#[case] args: &[&str]) {
         let args = args.iter().cloned().map(String::from);
-        assert_matches!(run(args), Err(Error::Cli(_)));
+        assert_matches!(run_cli(args), Err(Error::Cli(_)));
     }
 
     #[rstest]
     #[case(["juvix-cairo-vm", "tests/fibonacci.json", "--air_private_input", "/dev/null", "--proof_mode", "--memory_file", "/dev/null"].as_slice())]
     fn test_run_air_private_input_no_trace(#[case] args: &[&str]) {
         let args = args.iter().cloned().map(String::from);
-        assert_matches!(run(args), Err(Error::Cli(_)));
+        assert_matches!(run_cli(args), Err(Error::Cli(_)));
     }
 
     #[rstest]
     #[case(["juvix-cairo-vm", "tests/fibonacci.json", "--air_private_input", "/dev/null", "--proof_mode", "--trace_file", "/dev/null"].as_slice())]
     fn test_run_air_private_input_no_memory(#[case] args: &[&str]) {
         let args = args.iter().cloned().map(String::from);
-        assert_matches!(run(args), Err(Error::Cli(_)));
+        assert_matches!(run_cli(args), Err(Error::Cli(_)));
     }
 
     #[rstest]
     #[case(["juvix-cairo-vm", "tests/fibonacci.json", "--air_private_input", "/dev/null", "--trace_file", "/dev/null", "--memory_file", "/dev/null"].as_slice())]
     fn test_run_air_private_input_no_proof(#[case] args: &[&str]) {
         let args = args.iter().cloned().map(String::from);
-        assert_matches!(run(args), Err(Error::Cli(_)));
+        assert_matches!(run_cli(args), Err(Error::Cli(_)));
     }
 
     #[rstest]
@@ -338,9 +354,9 @@ mod tests {
             || (air_private_input && (!proof_mode || !trace_file || !memory_file))
             || cairo_pie_output && proof_mode
         {
-            assert_matches!(run(args.into_iter()), Err(_));
+            assert_matches!(run_cli(args.into_iter()), Err(_));
         } else {
-            assert_matches!(run(args.into_iter()), Ok(_));
+            assert_matches!(run_cli(args.into_iter()), Ok(_));
         }
     }
 
@@ -349,7 +365,7 @@ mod tests {
         let args = ["juvix-cairo-vm", "missing/program.json"]
             .into_iter()
             .map(String::from);
-        assert_matches!(run(args), Err(Error::IO(_)));
+        assert_matches!(run_cli(args), Err(Error::IO(_)));
     }
 
     #[rstest]
@@ -360,7 +376,7 @@ mod tests {
     #[case("tests/manually_compiled/no_main_program.json")]
     fn test_run_bad_file(#[case] program: &str) {
         let args = ["juvix-cairo-vm", program].into_iter().map(String::from);
-        assert_matches!(run(args), Err(Error::Runner(_)));
+        assert_matches!(run_cli(args), Err(Error::Runner(_)));
     }
 
     //Since the functionality here is trivial, I just call the function

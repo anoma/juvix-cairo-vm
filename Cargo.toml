@@ -10,6 +10,8 @@ clap = { version = "4.3.10", features = ["derive"] }
 thiserror = { version = "1.0.40" }
 bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde"] }
 nom = { version = "7.0" }
+serde_json = { version = "1.0" }
+serde = { version = "1.0" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

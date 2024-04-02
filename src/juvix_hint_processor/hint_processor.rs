@@ -14,6 +14,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::hint::Hint;
+use crate::program_input::ProgramInput;
 
 /// Execution scope for constant memory allocation.
 struct MemoryExecScope {
@@ -22,12 +23,14 @@ struct MemoryExecScope {
 }
 
 pub struct JuvixHintProcessor {
+    program_input: ProgramInput,
     run_resources: RunResources,
 }
 
 impl JuvixHintProcessor {
-    pub fn new() -> Self {
+    pub fn new(program_input: ProgramInput) -> Self {
         Self {
+            program_input,
             run_resources: RunResources::default(),
         }
     }
@@ -41,7 +44,7 @@ impl JuvixHintProcessor {
         match hint {
             Hint::Alloc(size) => self.alloc_constant_size(vm, exec_scopes, *size),
 
-            Hint::Input(_) => panic!("input hints not implemented"),
+            Hint::Input(var) => self.read_program_input(vm, var),
         }
     }
 
@@ -69,6 +72,11 @@ impl JuvixHintProcessor {
 
         memory_exec_scope.next_address.offset += size;
         Ok(())
+    }
+
+    fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
+        vm.insert_value(vm.get_ap(), self.program_input.get(var.as_str()))
+            .map_err(HintError::Memory)
     }
 }
 
