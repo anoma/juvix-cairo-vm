@@ -14,16 +14,22 @@ fn parse_usize(input: &str) -> IResult<&str, usize> {
     map(parse_u64, |num: u64| num as usize)(input)
 }
 
+fn parse_string_quoted(quote_char: char) -> impl Fn(&str) -> IResult<&str, String> {
+    move |input: &str| {
+        delimited(
+            char(quote_char),
+            escaped_transform(
+                none_of(&[quote_char, '\\'][..]),
+                '\\',
+                alt((value('\\', char('\\')), value(quote_char, char(quote_char)))),
+            ),
+            char(quote_char),
+        )(input)
+    }
+}
+
 fn parse_string(input: &str) -> IResult<&str, String> {
-    delimited(
-        char('"'),
-        escaped_transform(
-            none_of("\"\\"),
-            '\\',
-            alt((value('\\', char('\\')), value('"', char('"')))),
-        ),
-        char('"'),
-    )(input)
+    alt((parse_string_quoted('"'), parse_string_quoted('\'')))(input)
 }
 
 fn parse_input(input: &str) -> IResult<&str, Hint> {
@@ -66,11 +72,11 @@ impl FromStr for Hint {
         match parse_hint(input) {
             Ok((_, parsed)) => Ok(parsed),
             Err(nom::Err::Error(e)) | Err(nom::Err::Failure(e)) => Err(ParseHintError {
-                message: format!("Error parsing hint '{}': {:?}", input, e),
+                message: format!("Error parsing hint {}: {:?}", input, e),
             }),
             Err(nom::Err::Incomplete(needed)) => Err(ParseHintError {
                 message: format!(
-                    "Error parsing hint - incomplete input: '{}'. Needed: {:?}",
+                    "Error parsing hint - incomplete input: {}. Needed: {:?}",
                     input, needed
                 ),
             }),
@@ -86,6 +92,8 @@ mod tests {
     #[rstest]
     #[case((r#"Input("A string with \"escaped quotes\" and \\ backslashes")"#,
             Hint::Input(String::from("A string with \"escaped quotes\" and \\ backslashes"))))]
+    #[case((r#"Input('Another string with \'escaped quotes\' and \\ backslashes')"#,
+            Hint::Input(String::from("Another string with 'escaped quotes' and \\ backslashes"))))]
     #[case((r#"Alloc(123)"#, Hint::Alloc(123)))]
     #[case((r#" Alloc ( 123 ) "#, Hint::Alloc(123)))]
     fn tests_positive(#[case] arg: (&str, Hint)) {
