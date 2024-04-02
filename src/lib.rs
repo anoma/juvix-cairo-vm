@@ -132,7 +132,8 @@ impl FileWriter {
     }
 }
 
-pub fn run(args: Args, program_input: ProgramInput) -> Result<(), Error> {
+// Returns the program output
+pub fn run(args: Args, program_input: ProgramInput) -> Result<String, Error> {
     let trace_enabled = args.trace_file.is_some() || args.air_public_input.is_some();
     let mut hint_executor = JuvixHintProcessor::new(program_input);
     let cairo_run_config = cairo_run::CairoRunConfig {
@@ -149,19 +150,10 @@ pub fn run(args: Args, program_input: ProgramInput) -> Result<(), Error> {
     let program_content = std::fs::read(args.filename).map_err(Error::IO)?;
 
     let (cairo_runner, mut vm) =
-        match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor) {
-            Ok(runner) => runner,
-            Err(error) => {
-                eprintln!("{error}");
-                return Err(Error::Runner(error));
-            }
-        };
+        cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor)?;
 
-    if args.print_output {
-        let mut output_buffer = "Program Output:\n".to_string();
-        vm.write_output(&mut output_buffer)?;
-        print!("{output_buffer}");
-    }
+    let mut output_buffer = "".to_string();
+    vm.write_output(&mut output_buffer)?;
 
     if let Some(ref trace_path) = args.trace_file {
         let relocated_trace = cairo_runner
@@ -224,17 +216,30 @@ pub fn run(args: Args, program_input: ProgramInput) -> Result<(), Error> {
             .write_zip_file(file_path)?
     }
 
-    Ok(())
+    Ok(output_buffer)
 }
 
 pub fn run_cli(args: impl Iterator<Item = String>) -> Result<(), Error> {
     let args = Args::try_parse_from(args)?;
+    let program_input;
     if let Some(ref file) = args.program_input {
-        let program_input = ProgramInput::from_json(std::fs::read_to_string(file)?.as_str())?;
-        run(args, program_input)
+        program_input = ProgramInput::from_json(std::fs::read_to_string(file)?.as_str())?;
     } else {
-        let program_input = ProgramInput::new(HashMap::new());
-        run(args, program_input)
+        program_input = ProgramInput::new(HashMap::new());
+    }
+    let print_output = args.print_output;
+    match run(args, program_input) {
+        Ok(output) => {
+            if print_output {
+                print!("{output}");
+            }
+            Ok(())
+        }
+        Err(Error::Runner(error)) => {
+            eprintln!("{error}");
+            Err(Error::Runner(error))
+        }
+        Err(err) => Err(err),
     }
 }
 
