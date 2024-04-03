@@ -69,8 +69,8 @@ impl JuvixHintProcessor {
             };
 
         vm.insert_value(vm.get_ap(), memory_exec_scope.next_address)?;
-
         memory_exec_scope.next_address.offset += size;
+
         Ok(())
     }
 

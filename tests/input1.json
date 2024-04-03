@@ -205,7 +205,7 @@
                     "__main__",
                     "__main__.main"
                 ],
-                "code": "Input('abba')",
+                "code": "Input(abba)",
                 "flow_tracking_data": {
                     "ap_tracking": {
                         "group": 2,
