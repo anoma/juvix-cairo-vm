@@ -302,7 +302,7 @@
                     "__main__",
                     "__main__.main"
                 ],
-                "code": "Input('X')",
+                "code": "Input(X)",
                 "flow_tracking_data": {
                     "ap_tracking": {
                         "group": 2,
@@ -320,7 +320,7 @@
                     "__main__",
                     "__main__.main"
                 ],
-                "code": "Input('Y')",
+                "code": "Input(Y)",
                 "flow_tracking_data": {
                     "ap_tracking": {
                         "group": 2,
