@@ -304,7 +304,6 @@ mod tests {
         #[values(false, true)] memory_file: bool,
         #[values(false, true)] mut trace_file: bool,
         #[values(false, true)] proof_mode: bool,
-        #[values(false, true)] secure_run: bool,
         #[values(false, true)] print_output: bool,
         #[values(false, true)] entrypoint: bool,
         #[values(false, true)] air_public_input: bool,
@@ -336,9 +335,6 @@ mod tests {
         }
         if trace_file {
             args.extend_from_slice(&["--trace_file".to_string(), "/dev/null".to_string()]);
-        }
-        if secure_run {
-            args.extend_from_slice(&["--secure_run".to_string(), "true".to_string()]);
         }
         if print_output {
             args.extend_from_slice(&["--print_output".to_string()]);
@@ -454,5 +450,20 @@ mod tests {
             ProgramInput::from_json(std::fs::read_to_string(input).unwrap().as_str()).unwrap();
         let args = Args::try_parse_from(args_cli).unwrap();
         assert_eq!(run(args, program_input).unwrap(), output);
+    }
+
+    #[rstest]
+    #[case("tests/ec_random.json")]
+    fn test_run_positive(#[case] program: &str) {
+        let args_cli = [
+            "juvix-cairo-vm",
+            program,
+            "--proof_mode",
+            "--layout",
+            "small",
+        ]
+        .into_iter()
+        .map(String::from);
+        assert_matches!(run_cli(args_cli), Ok(()));
     }
 }

@@ -2,4 +2,5 @@
 pub enum Hint {
     Input(String),
     Alloc(usize),
+    RandomEcPoint,
 }
