@@ -22,4 +22,4 @@ rstest = "0.17.0"
 
 [features]
 default = ["with_mimalloc"]
-with_mimalloc = ["cairo-vm/with_mimalloc", "dep:mimalloc"]
+with_mimalloc = ["dep:mimalloc"]
