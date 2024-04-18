@@ -47,10 +47,14 @@ fn parse_alloc(input: &str) -> IResult<&str, Hint> {
     )(input)
 }
 
+fn parse_random_ec_point(input: &str) -> IResult<&str, Hint> {
+    map(tag("RandomEcPoint"), |_| Hint::RandomEcPoint)(input)
+}
+
 fn parse_hint(input: &str) -> IResult<&str, Hint> {
     all_consuming(delimited(
         multispace0,
-        alt((parse_input, parse_alloc)),
+        alt((parse_input, parse_alloc, parse_random_ec_point)),
         multispace0,
     ))(input)
 }
@@ -97,6 +101,7 @@ mod tests {
             Hint::Input(String::from("__ident_"))))]
     #[case((r#"Alloc(123)"#, Hint::Alloc(123)))]
     #[case((r#" Alloc ( 123 ) "#, Hint::Alloc(123)))]
+    #[case((r#" RandomEcPoint  "#, Hint::RandomEcPoint))]
     fn tests_positive(#[case] arg: (&str, Hint)) {
         assert_eq!(arg.0.parse::<Hint>().unwrap(), arg.1)
     }
@@ -109,6 +114,7 @@ mod tests {
     #[case("Input(var) extra")]
     #[case("Input(1var)")]
     #[case("Input(var var)")]
+    #[case("RandomEcPoint()")]
     fn tests_negative(#[case] arg: &str) {
         match arg.parse::<Hint>() {
             Ok(_) => assert!(false),

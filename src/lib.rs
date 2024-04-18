@@ -455,4 +455,19 @@ mod tests {
         let args = Args::try_parse_from(args_cli).unwrap();
         assert_eq!(run(args, program_input).unwrap(), output);
     }
+
+    #[rstest]
+    #[case("tests/ec_random.json")]
+    fn test_run_positive(#[case] program: &str) {
+        let args_cli = [
+            "juvix-cairo-vm",
+            program,
+            "--proof_mode",
+            "--layout",
+            "small",
+        ]
+        .into_iter()
+        .map(String::from);
+        assert_matches!(run_cli(args_cli), Ok(()));
+    }
 }

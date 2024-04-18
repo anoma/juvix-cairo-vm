@@ -12,6 +12,9 @@ bincode = { version = "2.0.0-rc.3", default-features = false, features = ["serde
 nom = { version = "7.0" }
 serde_json = { version = "1.0" }
 serde = { version = "1.0" }
+ark-ff = { version = "0.4.2", default-features = false }
+ark-std = { version = "0.4.0", default-features = false }
+num-bigint = { version = "0.4", default-features = false, features = ["serde", "rand"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

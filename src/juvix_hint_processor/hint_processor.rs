@@ -1,3 +1,6 @@
+use ark_ff::fields::{Fp256, MontBackend, MontConfig};
+use ark_ff::{Field, PrimeField};
+use ark_std::UniformRand;
 use cairo_vm::any_box;
 use cairo_vm::hint_processor::hint_processor_definition::HintReference;
 use cairo_vm::types::relocatable::Relocatable;
@@ -10,11 +13,27 @@ use cairo_vm::{
     vm::errors::vm_errors::VirtualMachineError,
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
+use num_bigint::BigUint;
 use std::any::Any;
 use std::collections::HashMap;
 
 use super::hint::Hint;
 use crate::program_input::ProgramInput;
+
+#[derive(MontConfig)]
+#[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
+#[generator = "3"]
+
+/// Returns the Beta value of the Starkware elliptic curve.
+struct FqConfig;
+type Fq = Fp256<MontBackend<FqConfig, 4>>;
+
+fn get_beta() -> Felt252 {
+    Felt252::from_dec_str(
+        "3141592653589793238462643383279502884197169399375105820974944592307816406665",
+    )
+    .unwrap()
+}
 
 /// Execution scope for constant memory allocation.
 struct MemoryExecScope {
@@ -45,6 +64,8 @@ impl JuvixHintProcessor {
             Hint::Alloc(size) => self.alloc_constant_size(vm, exec_scopes, *size),
 
             Hint::Input(var) => self.read_program_input(vm, var),
+
+            Hint::RandomEcPoint => self.random_ec_point(vm),
         }
     }
 
@@ -77,6 +98,34 @@ impl JuvixHintProcessor {
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
         vm.insert_value(vm.get_ap(), self.program_input.get(var.as_str()))
             .map_err(HintError::Memory)
+    }
+
+    fn random_ec_point(&self, vm: &mut VirtualMachine) -> Result<(), HintError> {
+        let beta = Fq::from(get_beta().to_biguint());
+
+        let mut rng = ark_std::test_rng();
+        let (random_x, random_y_squared) = loop {
+            let random_x = Fq::rand(&mut rng);
+            let random_y_squared = random_x * random_x * random_x + random_x + beta;
+            if random_y_squared.legendre().is_qr() {
+                break (random_x, random_y_squared);
+            }
+        };
+
+        let x_bigint: BigUint = random_x.into_bigint().into();
+        let y_bigint: BigUint = random_y_squared
+            .sqrt()
+            .ok_or_else(|| {
+                HintError::CustomHint("Failed to compute sqrt".to_string().into_boxed_str())
+            })?
+            .into_bigint()
+            .into();
+
+        let ap = vm.get_ap();
+        vm.insert_value(ap, Felt252::from(&x_bigint))?;
+        vm.insert_value((ap + 1)?, Felt252::from(&y_bigint))?;
+
+        Ok(())
     }
 }
 
