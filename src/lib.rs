@@ -132,6 +132,58 @@ impl FileWriter {
     }
 }
 
+// The anoma_cairo_vm_runner is used in Anoma to return output, trace, and memory.
+pub fn anoma_cairo_vm_runner(
+    program_content: &[u8],
+    program_input: ProgramInput,
+) -> Result<(String, Vec<u8>, Vec<u8>), Error> {
+    let mut hint_executor = JuvixHintProcessor::new(program_input);
+
+    let cairo_run_config = cairo_run::CairoRunConfig {
+        trace_enabled: true,
+        relocate_mem: true,
+        proof_mode: true,
+        layout: "all_cairo",
+        ..Default::default()
+    };
+
+    let (cairo_runner, mut vm) =
+        cairo_run::cairo_run(program_content, &cairo_run_config, &mut hint_executor)?;
+
+    let mut output_buffer = "".to_string();
+    vm.write_output(&mut output_buffer)?;
+
+    let trace = {
+        let relocated_trace = cairo_runner
+            .relocated_trace
+            .as_ref()
+            .ok_or(Error::Trace(TraceError::TraceNotRelocated))?;
+        let mut output: Vec<u8> = Vec::with_capacity(3 * 1024 * 1024);
+        for entry in relocated_trace.iter() {
+            output.extend_from_slice(&(entry.ap as u64).to_le_bytes());
+            output.extend_from_slice(&(entry.fp as u64).to_le_bytes());
+            output.extend_from_slice(&(entry.pc as u64).to_le_bytes());
+        }
+        output
+    };
+
+    let memory = {
+        let mut output: Vec<u8> = Vec::with_capacity(1024 * 1024);
+        for (i, entry) in cairo_runner.relocated_memory.iter().enumerate() {
+            match entry {
+                None => continue,
+                Some(unwrapped_memory_cell) => {
+                    output.extend_from_slice(&(i as u64).to_le_bytes());
+                    output.extend_from_slice(&unwrapped_memory_cell.to_bytes_le());
+                }
+            }
+        }
+        output
+    };
+
+    Ok((output_buffer, trace, memory))
+}
+
 // Returns the program output
 pub fn run(args: Args, program_input: ProgramInput) -> Result<String, Error> {
     let trace_enabled = args.trace_file.is_some() || args.air_public_input.is_some();
