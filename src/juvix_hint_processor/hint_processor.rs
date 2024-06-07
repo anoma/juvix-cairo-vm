@@ -18,7 +18,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use super::hint::Hint;
-use crate::program_input::ProgramInput;
+use crate::program_input::{ProgramInput, Value};
 
 #[derive(MontConfig)]
 #[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
@@ -96,8 +96,10 @@ impl JuvixHintProcessor {
     }
 
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
-        vm.insert_value(vm.get_ap(), self.program_input.get(var.as_str()))
-            .map_err(HintError::Memory)
+        match self.program_input.get(var.as_str()) {
+            Value::ValueFelt(v) => vm.insert_value(vm.get_ap(), v).map_err(HintError::Memory),
+            _ => panic!("unimplemented"),
+        }
     }
 
     fn random_ec_point(&self, vm: &mut VirtualMachine) -> Result<(), HintError> {
