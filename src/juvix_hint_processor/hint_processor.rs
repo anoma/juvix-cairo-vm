@@ -4,7 +4,6 @@ use ark_std::UniformRand;
 use cairo_vm::any_box;
 use cairo_vm::hint_processor::hint_processor_definition::HintReference;
 use cairo_vm::types::relocatable::Relocatable;
-use cairo_vm::vm::errors::memory_errors::MemoryError;
 use cairo_vm::vm::runners::cairo_runner::ResourceTracker;
 use cairo_vm::vm::runners::cairo_runner::RunResources;
 use cairo_vm::Felt252;
@@ -98,29 +97,108 @@ impl JuvixHintProcessor {
     }
 
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
-        match self.program_input.get(var.as_str()) {
-            Value::ValueFelt(v) => self.read_felt_input(vm, v),
-            Value::ValueBool(v) => self.read_bool_input(vm, *v),
-            Value::ValueRecord(v) => self.read_record_input(vm, v),
-            _ => panic!("unimplemented"),
+        self.read_value_input(vm, vm.get_ap(), self.program_input.get(var.as_str()))
+            .map(|_| ())
+    }
+
+    // returns the number of memory words written
+    fn read_value_input(
+        &self,
+        vm: &mut VirtualMachine,
+        addr: Relocatable,
+        val: &Value,
+    ) -> Result<usize, HintError> {
+        match val {
+            Value::ValueFelt(v) => self.read_felt_input(vm, addr, v),
+            Value::ValueBool(v) => self.read_bool_input(vm, addr, *v),
+            Value::ValueRecord(v) => self.read_record_input(vm, addr, v),
+            Value::ValueList(v) => self.read_list_input(vm, addr, v),
         }
     }
 
-    fn read_felt_input(&self, vm: &mut VirtualMachine, v: &Felt252) -> Result<(), HintError> {
-        vm.insert_value(vm.get_ap(), v).map_err(HintError::Memory)
+    fn read_felt_input(
+        &self,
+        vm: &mut VirtualMachine,
+        addr: Relocatable,
+        v: &Felt252,
+    ) -> Result<usize, HintError> {
+        vm.insert_value(addr, v)
+            .map_err(HintError::Memory)
+            .map(|()| 1)
     }
 
-    fn read_bool_input(&self, vm: &mut VirtualMachine, v: bool) -> Result<(), HintError> {
-        vm.insert_value(vm.get_ap(), if v { 0 } else { 1 })
+    fn read_bool_input(
+        &self,
+        vm: &mut VirtualMachine,
+        addr: Relocatable,
+        v: bool,
+    ) -> Result<usize, HintError> {
+        vm.insert_value(addr, if v { 0 } else { 1 })
             .map_err(HintError::Memory)
+            .map(|()| 1)
     }
 
     fn read_record_input(
         &self,
         vm: &mut VirtualMachine,
-        v: &IndexMap<String, Value>,
-    ) -> Result<(), HintError> {
-        panic!("unimplemented")
+        addr: Relocatable,
+        fields: &IndexMap<String, Value>,
+    ) -> Result<usize, HintError> {
+        // header
+        vm.insert_value(addr, 0).map_err(HintError::Memory)?;
+        // free address after record
+        let mut addr1 = (addr + fields.len()).map_err(HintError::Math)?;
+        for i in 0..fields.len() {
+            let addr0 = (addr + (i + 1)).map_err(HintError::Math)?;
+            addr1 = self.read_pointer_value_input(vm, addr0, addr1, &fields[i])?;
+        }
+        Ok((addr1 - addr)?)
+    }
+
+    fn read_list_input(
+        &self,
+        vm: &mut VirtualMachine,
+        addr: Relocatable,
+        elems: &Vec<Value>,
+    ) -> Result<usize, HintError> {
+        let mut addr1 = (addr + 1 as usize).map_err(HintError::Math)?;
+        // pointer to first cell
+        vm.insert_value(addr, addr1).map_err(HintError::Memory)?;
+        for val in elems {
+            let mut addr2 = (addr1 + 3 as usize).map_err(HintError::Math)?;
+            // header: cons cell
+            vm.insert_value(addr1, 1).map_err(HintError::Memory)?;
+            // cons value
+            addr2 = self.read_pointer_value_input(vm, (addr1 + 1)?, addr2, val)?;
+            // cons next pointer
+            vm.insert_value((addr1 + 2)?, addr2)
+                .map_err(HintError::Memory)?;
+            addr1 = addr2;
+        }
+        // nil cell: header = 0
+        vm.insert_value(addr1, 0).map_err(HintError::Memory)?;
+        Ok((addr1 - addr)? + 1)
+    }
+
+    fn read_pointer_value_input(
+        &self,
+        vm: &mut VirtualMachine,
+        addr1: Relocatable,
+        mut addr2: Relocatable,
+        val: &Value,
+    ) -> Result<Relocatable, HintError> {
+        match val {
+            Value::ValueRecord(v) => {
+                vm.insert_value(addr1, addr2).map_err(HintError::Memory)?;
+                addr2 += self.read_record_input(vm, addr2, v)?
+            }
+            Value::ValueList(v) => {
+                vm.insert_value(addr1, addr2).map_err(HintError::Memory)?;
+                addr2 += self.read_list_input(vm, addr2, v)?
+            }
+            _ => self.read_value_input(vm, addr1, val).map(|_| ())?,
+        }
+        Ok(addr2)
     }
 
     fn random_ec_point(&self, vm: &mut VirtualMachine) -> Result<(), HintError> {
