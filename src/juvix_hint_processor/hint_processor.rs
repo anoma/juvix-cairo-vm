@@ -97,8 +97,16 @@ impl JuvixHintProcessor {
     }
 
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
-        self.read_value_input(vm, vm.get_ap(), self.program_input.get(var.as_str()))
-            .map(|_| ())
+        let val = self.program_input.get(var.as_str());
+        let addr = match val {
+            Value::ValueFelt(_) | Value::ValueBool(_) => vm.get_ap(),
+            Value::ValueRecord(_) | Value::ValueList(_) => {
+                let segment = vm.add_memory_segment();
+                vm.insert_value(vm.get_ap(), segment)?;
+                segment
+            }
+        };
+        self.read_value_input(vm, addr, val).map(|_| ())
     }
 
     // returns the number of memory words written
