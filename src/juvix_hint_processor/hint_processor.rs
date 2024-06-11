@@ -36,6 +36,10 @@ fn get_beta() -> Felt252 {
     .unwrap()
 }
 
+fn get_cid(n: usize) -> usize {
+    n * 2 + 1
+}
+
 /// Execution scope for constant memory allocation.
 struct MemoryExecScope {
     /// The first free address in the segment.
@@ -153,9 +157,10 @@ impl JuvixHintProcessor {
         fields: &IndexMap<String, Value>,
     ) -> Result<usize, HintError> {
         // header
-        vm.insert_value(addr, 0).map_err(HintError::Memory)?;
+        vm.insert_value(addr, get_cid(0))
+            .map_err(HintError::Memory)?;
         // free address after record
-        let mut addr1 = (addr + fields.len()).map_err(HintError::Math)?;
+        let mut addr1 = (addr + (fields.len() + 1)).map_err(HintError::Math)?;
         for i in 0..fields.len() {
             let addr0 = (addr + (i + 1)).map_err(HintError::Math)?;
             addr1 = self.read_pointer_value_input(vm, addr0, addr1, &fields[i])?;
@@ -173,7 +178,8 @@ impl JuvixHintProcessor {
         for val in elems {
             let mut addr2 = (addr1 + 3 as usize).map_err(HintError::Math)?;
             // header: cons cell
-            vm.insert_value(addr1, 1).map_err(HintError::Memory)?;
+            vm.insert_value(addr1, get_cid(1))
+                .map_err(HintError::Memory)?;
             // cons value
             addr2 = self.read_pointer_value_input(vm, (addr1 + 1)?, addr2, val)?;
             // cons next pointer
@@ -182,7 +188,8 @@ impl JuvixHintProcessor {
             addr1 = addr2;
         }
         // nil cell: header = 0
-        vm.insert_value(addr1, 0).map_err(HintError::Memory)?;
+        vm.insert_value(addr1, get_cid(0))
+            .map_err(HintError::Memory)?;
         Ok((addr1 - addr)? + 1)
     }
 
