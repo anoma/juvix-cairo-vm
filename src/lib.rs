@@ -482,6 +482,7 @@ mod tests {
 
     #[rstest]
     #[case("tests/input2.json", "tests/input2_input.json", "83\n")]
+    #[case("tests/input3.json", "tests/input3_input.json", "14\n")]
     fn test_input_output_positive(
         #[case] program: &str,
         #[case] input: &str,

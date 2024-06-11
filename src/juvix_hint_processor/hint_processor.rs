@@ -169,9 +169,7 @@ impl JuvixHintProcessor {
         addr: Relocatable,
         elems: &Vec<Value>,
     ) -> Result<usize, HintError> {
-        let mut addr1 = (addr + 1 as usize).map_err(HintError::Math)?;
-        // pointer to first cell
-        vm.insert_value(addr, addr1).map_err(HintError::Memory)?;
+        let mut addr1 = addr;
         for val in elems {
             let mut addr2 = (addr1 + 3 as usize).map_err(HintError::Math)?;
             // header: cons cell
