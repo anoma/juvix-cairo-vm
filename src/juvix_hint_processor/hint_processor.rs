@@ -36,6 +36,8 @@ fn get_beta() -> Felt252 {
     .unwrap()
 }
 
+/// Constructor id calculation. Make sure this corresponds to constructor id
+/// calculation in Juvix.Compiler.Casm.Translation.FromReg.
 fn get_cid(n: usize) -> usize {
     n * 2 + 1
 }
