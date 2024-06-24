@@ -68,11 +68,14 @@ impl JuvixHintProcessor {
         hint: &Hint,
     ) -> Result<(), HintError> {
         match hint {
-            Hint::Alloc(size) => self.alloc_constant_size(vm, exec_scopes, *size),
+            Hint::Alloc(size) => {
+                self.alloc_constant_size(vm, exec_scopes, *size)?;
+                Ok(())
+            }
 
             Hint::Input(var) => self.read_program_input(vm, var),
 
-            Hint::RandomEcPoint => self.random_ec_point(vm),
+            Hint::RandomEcPoint => self.random_ec_point(vm, exec_scopes),
         }
     }
 
@@ -81,7 +84,7 @@ impl JuvixHintProcessor {
         vm: &mut VirtualMachine,
         exec_scopes: &mut ExecutionScopes,
         size: usize,
-    ) -> Result<(), HintError> {
+    ) -> Result<Relocatable, HintError> {
         let memory_exec_scope =
             match exec_scopes.get_mut_ref::<MemoryExecScope>("memory_exec_scope") {
                 Ok(memory_exec_scope) => memory_exec_scope,
@@ -96,10 +99,11 @@ impl JuvixHintProcessor {
                 }
             };
 
-        vm.insert_value(vm.get_ap(), memory_exec_scope.next_address)?;
+        let addr = memory_exec_scope.next_address;
+        vm.insert_value(vm.get_ap(), addr)?;
         memory_exec_scope.next_address.offset += size;
 
-        Ok(())
+        Ok(addr)
     }
 
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
@@ -158,13 +162,10 @@ impl JuvixHintProcessor {
         addr: Relocatable,
         fields: &IndexMap<String, Value>,
     ) -> Result<usize, HintError> {
-        // header
-        vm.insert_value(addr, get_cid(0))
-            .map_err(HintError::Memory)?;
         // free address after record
-        let mut addr1 = (addr + (fields.len() + 1)).map_err(HintError::Math)?;
+        let mut addr1 = (addr + fields.len()).map_err(HintError::Math)?;
         for i in 0..fields.len() {
-            let addr0 = (addr + (i + 1)).map_err(HintError::Math)?;
+            let addr0 = (addr + i).map_err(HintError::Math)?;
             addr1 = self.read_pointer_value_input(vm, addr0, addr1, &fields[i])?;
         }
         Ok((addr1 - addr)?)
@@ -216,7 +217,11 @@ impl JuvixHintProcessor {
         Ok(addr2)
     }
 
-    fn random_ec_point(&self, vm: &mut VirtualMachine) -> Result<(), HintError> {
+    fn random_ec_point(
+        &self,
+        vm: &mut VirtualMachine,
+        exec_scopes: &mut ExecutionScopes,
+    ) -> Result<(), HintError> {
         let beta = Fq::from(get_beta().to_biguint());
 
         let mut rng = ark_std::test_rng();
@@ -237,9 +242,9 @@ impl JuvixHintProcessor {
             .into_bigint()
             .into();
 
-        let ap = vm.get_ap();
-        vm.insert_value(ap, Felt252::from(&x_bigint))?;
-        vm.insert_value((ap + 1)?, Felt252::from(&y_bigint))?;
+        let addr = self.alloc_constant_size(vm, exec_scopes, 2)?;
+        vm.insert_value(addr, Felt252::from(&x_bigint))?;
+        vm.insert_value((addr + 1)?, Felt252::from(&y_bigint))?;
 
         Ok(())
     }

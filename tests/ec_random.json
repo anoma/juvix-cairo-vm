@@ -22,10 +22,11 @@
         "0x6f21413efbe40de150e596d72f7a8c5609ad26c15c915c1f4cdfcb99cee9e89",
         "0x404a7ffd7ffd7fff",
         "0x208b7fff7fff7ffe",
-        "0x40780017fff7fff",
-        "0x2",
+        "0x481280007fff8000",
+        "0x4802800080008000",
+        "0x4802800180008000",
         "0x1104800180018000",
-        "0x800000000000010fffffffffffffffffffffffffffffffffffffffffffffff2",
+        "0x800000000000010fffffffffffffffffffffffffffffffffffffffffffffff1",
         "0x208b7fff7fff7ffe"
     ],
     "debug_info": {
@@ -374,13 +375,51 @@
                     }
                 ],
                 "inst": {
-                    "end_col": 10,
+                    "end_col": 20,
                     "end_line": 16,
                     "input_file": {
                         "filename": "ec_random.cairo"
                     },
                     "start_col": 3,
                     "start_line": 16
+                }
+            },
+            "20": {
+                "accessible_scopes": [
+                    "__main__",
+                    "__main__.main"
+                ],
+                "flow_tracking_data": {
+                    "ap_tracking": {
+                        "group": 3,
+                        "offset": 1
+                    },
+                    "reference_ids": {
+                        "__main__.main.x": 6,
+                        "__main__.main.y": 7
+                    }
+                },
+                "hints": [],
+                "inst": {
+                    "end_col": 17,
+                    "end_line": 17,
+                    "input_file": {
+                        "filename": "ec_random.cairo"
+                    },
+                    "parent_location": [
+                        {
+                            "end_col": 20,
+                            "end_line": 19,
+                            "input_file": {
+                                "filename": "ec_random.cairo"
+                            },
+                            "start_col": 19,
+                            "start_line": 19
+                        },
+                        "While expanding the reference 'x' in:"
+                    ],
+                    "start_col": 11,
+                    "start_line": 17
                 }
             },
             "21": {
@@ -400,6 +439,44 @@
                 },
                 "hints": [],
                 "inst": {
+                    "end_col": 21,
+                    "end_line": 18,
+                    "input_file": {
+                        "filename": "ec_random.cairo"
+                    },
+                    "parent_location": [
+                        {
+                            "end_col": 23,
+                            "end_line": 19,
+                            "input_file": {
+                                "filename": "ec_random.cairo"
+                            },
+                            "start_col": 22,
+                            "start_line": 19
+                        },
+                        "While expanding the reference 'y' in:"
+                    ],
+                    "start_col": 11,
+                    "start_line": 18
+                }
+            },
+            "22": {
+                "accessible_scopes": [
+                    "__main__",
+                    "__main__.main"
+                ],
+                "flow_tracking_data": {
+                    "ap_tracking": {
+                        "group": 3,
+                        "offset": 3
+                    },
+                    "reference_ids": {
+                        "__main__.main.x": 6,
+                        "__main__.main.y": 7
+                    }
+                },
+                "hints": [],
+                "inst": {
                     "end_col": 24,
                     "end_line": 19,
                     "input_file": {
@@ -409,7 +486,7 @@
                     "start_line": 19
                 }
             },
-            "23": {
+            "24": {
                 "accessible_scopes": [
                     "__main__",
                     "__main__.main"
@@ -628,10 +705,10 @@
                 {
                     "ap_tracking_data": {
                         "group": 3,
-                        "offset": 2
+                        "offset": 1
                     },
-                    "pc": 21,
-                    "value": "[cast(ap + (-2), felt*)]"
+                    "pc": 20,
+                    "value": "[cast([fp], felt*)]"
                 }
             ],
             "type": "reference"
@@ -643,10 +720,10 @@
                 {
                     "ap_tracking_data": {
                         "group": 3,
-                        "offset": 2
+                        "offset": 1
                     },
-                    "pc": 21,
-                    "value": "[cast(ap + (-1), felt*)]"
+                    "pc": 20,
+                    "value": "[cast([fp] + 1, felt*)]"
                 }
             ],
             "type": "reference"
@@ -977,18 +1054,18 @@
             {
                 "ap_tracking_data": {
                     "group": 3,
-                    "offset": 2
+                    "offset": 1
                 },
-                "pc": 21,
-                "value": "[cast(ap + (-2), felt*)]"
+                "pc": 20,
+                "value": "[cast([fp], felt*)]"
             },
             {
                 "ap_tracking_data": {
                     "group": 3,
-                    "offset": 2
+                    "offset": 1
                 },
-                "pc": 21,
-                "value": "[cast(ap + (-1), felt*)]"
+                "pc": 20,
+                "value": "[cast([fp] + 1, felt*)]"
             }
         ]
     }
