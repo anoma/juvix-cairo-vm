@@ -158,13 +158,10 @@ impl JuvixHintProcessor {
         addr: Relocatable,
         fields: &IndexMap<String, Value>,
     ) -> Result<usize, HintError> {
-        // header
-        vm.insert_value(addr, get_cid(0))
-            .map_err(HintError::Memory)?;
         // free address after record
-        let mut addr1 = (addr + (fields.len() + 1)).map_err(HintError::Math)?;
+        let mut addr1 = (addr + fields.len()).map_err(HintError::Math)?;
         for i in 0..fields.len() {
-            let addr0 = (addr + (i + 1)).map_err(HintError::Math)?;
+            let addr0 = (addr + i).map_err(HintError::Math)?;
             addr1 = self.read_pointer_value_input(vm, addr0, addr1, &fields[i])?;
         }
         Ok((addr1 - addr)?)
