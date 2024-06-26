@@ -132,11 +132,12 @@ impl FileWriter {
     }
 }
 
-// The anoma_cairo_vm_runner is used in Anoma to return output, trace, and memory.
+// The anoma_cairo_vm_runner is used in Anoma to return output, trace, memory,
+// and public input.
 pub fn anoma_cairo_vm_runner(
     program_content: &[u8],
     program_input: ProgramInput,
-) -> Result<(String, Vec<u8>, Vec<u8>), Error> {
+) -> Result<(String, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
     let mut hint_executor = JuvixHintProcessor::new(program_input);
 
     let cairo_run_config = cairo_run::CairoRunConfig {
@@ -181,7 +182,21 @@ pub fn anoma_cairo_vm_runner(
         output
     };
 
-    Ok((output_buffer, trace, memory))
+    let vm_pub_inputs = cairo_runner.get_air_public_input(&vm)?;
+
+    let public_input = {
+        let mut output: Vec<u8> = Vec::with_capacity(1024 * 1024);
+        output.extend_from_slice(&(vm_pub_inputs.rc_min as u16).to_le_bytes());
+        output.extend_from_slice(&(vm_pub_inputs.rc_max as u16).to_le_bytes());
+        output.extend_from_slice(&(vm_pub_inputs.public_memory.len() as u64).to_le_bytes());
+        vm_pub_inputs.public_memory.iter().for_each(|mem_cell| {
+            output.extend_from_slice(&(mem_cell.address as u64).to_le_bytes());
+            output.extend_from_slice(&mem_cell.value.unwrap().to_bytes_le());
+        });
+        output
+    };
+
+    Ok((output_buffer, trace, memory, public_input))
 }
 
 // Returns the program output
