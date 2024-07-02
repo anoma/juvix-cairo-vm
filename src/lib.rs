@@ -193,6 +193,24 @@ pub fn anoma_cairo_vm_runner(
             output.extend_from_slice(&(mem_cell.address as u64).to_le_bytes());
             output.extend_from_slice(&mem_cell.value.unwrap().to_bytes_le());
         });
+
+        output.extend((vm_pub_inputs.memory_segments.len() as u8).to_le_bytes());
+        vm_pub_inputs.memory_segments.iter().for_each(|(k, v)| {
+            let segment_type = match *k {
+                "range_check" => 0u8,
+                "output" => 1u8,
+                "program" => 2u8,
+                "execution" => 3u8,
+                "ecdsa" => 4u8,
+                "pedersen" => 5u8,
+                _ => 64u8, // unknown type
+            };
+
+            output.extend(segment_type.to_le_bytes());
+            output.extend((v.begin_addr as u64).to_le_bytes());
+            output.extend((v.stop_ptr as u64).to_le_bytes());
+        });
+
         output
     };
 
