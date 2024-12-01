@@ -63,8 +63,8 @@ impl ProgramInput {
         }
     }
 
-    pub fn get(&self, var: &str) -> &Value {
-        &self.input_values[var]
+    pub fn get(&self, var: &str) -> Option<&Value> {
+        self.input_values.get(var)
     }
 }
 

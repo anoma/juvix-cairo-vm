@@ -107,7 +107,10 @@ impl JuvixHintProcessor {
     }
 
     fn read_program_input(&self, vm: &mut VirtualMachine, var: &String) -> Result<(), HintError> {
-        let val = self.program_input.get(var.as_str());
+        let val = self
+            .program_input
+            .get(var.as_str())
+            .ok_or(HintError::UnknownIdentifier(var.clone().into_boxed_str()))?;
         let addr = match val {
             Value::ValueFelt(_) | Value::ValueBool(_) => vm.get_ap(),
             Value::ValueRecord(_) | Value::ValueList(_) => {
