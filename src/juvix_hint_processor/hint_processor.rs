@@ -24,7 +24,6 @@ use crate::program_input::{ProgramInput, Value};
 #[derive(MontConfig)]
 #[modulus = "3618502788666131213697322783095070105623107215331596699973092056135872020481"]
 #[generator = "3"]
-
 /// Returns the Beta value of the Starkware elliptic curve.
 struct FqConfig;
 type Fq = Fp256<MontBackend<FqConfig, 4>>;
