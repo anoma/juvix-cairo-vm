@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![allow(non_local_definitions)]
 use bincode::enc::write::Writer;
 use cairo_vm::air_public_input::PublicInputError;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
